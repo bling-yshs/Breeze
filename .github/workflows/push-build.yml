@@ -155,7 +155,8 @@ jobs:
           fvm dart ./script/build_apk.dart
 
       - name: 上传 Android 产物
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: app-arm64-v8a-release.apk
           path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          archive: false
+          if-no-files-found: error
