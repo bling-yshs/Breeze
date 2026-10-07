@@ -260,6 +260,7 @@ Future<void> main(List<String> args) async {
         'build',
         'apk',
         '--split-per-abi',
+        '--target-platform=android-arm64',
         '--split-debug-info=$symbolsDir',
         '--dart-define=sentry_dsn=$sentryDsn',
       ],
