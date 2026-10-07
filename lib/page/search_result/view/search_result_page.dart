@@ -224,6 +224,9 @@ class _SearchResultPageState extends State<_SearchResultPage>
     return _genericList(state);
   }
 
+  /// 根据 [state] 构建搜索网格，向卡片传递对应漫画的点赞数量。
+  ///
+  /// 返回空结果提示或支持分页加载的漫画网格。
   Widget _genericList(SearchState state) {
     if (state.status == SearchStatus.success) {
       if (state.comics.isEmpty && state.hasReachedMax) {
@@ -243,6 +246,9 @@ class _SearchResultPageState extends State<_SearchResultPage>
     return PluginComicGridSliver(
       controller: _scrollController,
       entries: list,
+      likesCounts: {
+        for (final item in state.comics) item.comic.id: item.comic.likesCount,
+      },
       hasReachedMax:
           state.hasReachedMax && state.status == SearchStatus.success,
       isLoadingMore: state.status == SearchStatus.loadingMore,

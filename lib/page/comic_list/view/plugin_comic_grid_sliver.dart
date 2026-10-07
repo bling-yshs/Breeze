@@ -6,9 +6,21 @@ import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/type/enum.dart';
 
 class PluginComicGridSliver extends StatelessWidget {
+  /// 创建具有分页加载状态的漫画网格。
+  ///
+  /// [entries] 提供卡片数据，[likesCounts] 按漫画 ID 提供点赞数量，
+  /// [type]、[refresh]、[onDeleteSuccess] 配置卡片操作。
+  /// [hasReachedMax]、[isLoadingMore]、[loadMoreFailed] 描述分页状态，
+  /// [onRetryLoadMore]、[onLoadMore] 处理加载请求。
+  /// [controller]、[physics]、[shrinkWrap] 配置滚动，
+  /// [onEntryTap]、[onEntryLongPress]、[onEntrySecondaryTapDown] 处理交互，
+  /// [isEntrySelected]、[selectionMode] 配置选择状态，
+  /// [collectionTargetId]、[collectionTargetName] 指定收藏目标，[key] 标识组件。
+  /// 返回漫画网格组件。
   const PluginComicGridSliver({
     super.key,
     required this.entries,
+    this.likesCounts = const {},
     this.type = ComicEntryType.normal,
     this.refresh,
     this.onDeleteSuccess,
@@ -30,6 +42,7 @@ class PluginComicGridSliver extends StatelessWidget {
   });
 
   final List<ComicSimplifyEntryInfo> entries;
+  final Map<String, int> likesCounts;
   final ComicEntryType type;
   final VoidCallback? refresh;
   final ValueChanged<String>? onDeleteSuccess;
@@ -54,6 +67,7 @@ class PluginComicGridSliver extends StatelessWidget {
   final String? collectionTargetId;
   final String? collectionTargetName;
 
+  /// 使用 [context] 构建漫画卡片及分页操作，返回可滚动的网格。
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
@@ -63,6 +77,7 @@ class PluginComicGridSliver extends StatelessWidget {
       slivers: [
         BaseComicGridSliver(
           entries: entries,
+          likesCounts: likesCounts,
           type: type,
           refresh: refresh,
           onDeleteSuccess: onDeleteSuccess,
