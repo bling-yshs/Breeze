@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:html/parser.dart' as html_parser;
+import 'package:zephyr/network/http/plugin/jm_web_search_browser.dart';
 import 'package:zephyr/network/http/wind_http.dart';
 
 /// 从禁漫网页搜索结果提取漫画、点赞数量及分页信息。
 ///
 /// [pluginId] 用于关联图源，[keyword] 保留网页支持的包含和排除语法，
 /// [page] 为从 1 开始的页码，[extern] 携带排序、时间和搜索类型参数。
+/// 支持 WebView 的平台使用浏览器会话处理网站验证。
 /// 返回符合统一插件搜索协议的数据；请求或页面解析失败时抛出异常。
 Future<Map<String, dynamic>> searchJmWeb({
   required String pluginId,
@@ -14,37 +18,47 @@ Future<Map<String, dynamic>> searchJmWeb({
 }) async {
   final sortBy = int.tryParse(extern['sortBy']?.toString() ?? '') ?? 1;
   final order = extern['sort']?.toString().trim();
-  final response = await fetch(
-    'https://18comic.vip/search/photos',
-    query: {
-      'main_tag': extern['main_tag'] ?? 0,
-      'search_query': keyword.trim(),
-      'page': page,
-      'o': (order?.isNotEmpty ?? false)
-          ? order
-          : switch (sortBy) {
-              2 => 'mv',
-              3 => 'mp',
-              4 => 'tf',
-              _ => 'mr',
-            },
-      't': extern['t'] ?? 'a',
-    },
-    headers: {
-      'Accept': 'text/html',
-      'Referer': 'https://18comic.vip/',
-      'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-          'AppleWebKit/537.36 (KHTML, like Gecko) '
-          'Chrome/130.0.0.0 Safari/537.36',
-    },
-  );
-  if (!response.ok) {
-    throw StateError('禁漫网页搜索请求失败：HTTP ${response.status}');
+  final searchUri = Uri.https('18comic.vip', '/search/photos', {
+    'main_tag': (extern['main_tag'] ?? 0).toString(),
+    'search_query': keyword.trim(),
+    'page': page.toString(),
+    'o': (order?.isNotEmpty ?? false)
+        ? order!
+        : switch (sortBy) {
+            2 => 'mv',
+            3 => 'mp',
+            4 => 'tf',
+            _ => 'mr',
+          },
+    't': (extern['t'] ?? 'a').toString(),
+  });
+  final String html;
+  final Uri baseUri;
+  if (Platform.isAndroid ||
+      Platform.isIOS ||
+      Platform.isMacOS ||
+      Platform.isWindows) {
+    final browserPage = await loadJmSearchWebPage(searchUri);
+    html = browserPage.html;
+    baseUri = browserPage.uri;
+  } else {
+    final response = await fetch(
+      searchUri.toString(),
+      headers: {'Accept': 'text/html', 'Referer': 'https://18comic.vip/'},
+    );
+    if (!response.ok) {
+      final challenge = response.header('cf-mitigated') == 'challenge';
+      throw StateError(
+        challenge
+            ? '禁漫网站需要浏览器验证，当前平台暂未接入验证窗口'
+            : '禁漫网页搜索请求失败：HTTP ${response.status}',
+      );
+    }
+    html = response.text;
+    baseUri = Uri.parse(response.url);
   }
 
-  final document = html_parser.parse(response.text);
-  final baseUri = Uri.parse(response.url);
+  final document = html_parser.parse(html);
   final summary = document.querySelector('.well-sm');
   final totalText = document.querySelector('.search-pagination-total')?.text;
   final totalMatch = RegExp(r'共\s*([\d,]+)\s*部').firstMatch(totalText ?? '');
